@@ -15,7 +15,6 @@
 #include "MatrixStack.h"
 #include "WindowManager.h"
 #include "Texture.h"
-#include "Spline.h"
 #include "Bezier.h"
 #include "particleSys.h"
 

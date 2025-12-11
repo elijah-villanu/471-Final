@@ -1,11 +1,12 @@
-# Camera Controls
-Translating/moving the camera is controlled by WASD:
-W - Forward
-S - Backward
-A - Left
-D - Right
+# 471 Final Project Submission
+## To Compline and Run
+With VS CODE on Windows:
 
-Rotating the camera (pitch and yaw) is done with the mouse scroll callback (similar to lab 8). I was unsure if the assignment meant actual mouse movement or just scrolls.
+## Controls
+Camera control
+W - A - S - D: Forward, left, backward, right
+Mouse Scroll (AS INSTRUCTED FROM PITCH AND YAW LAB 8). Trackpad would work best
+G: Cinematic view, only works once
 
-# Cinematic Camera
-To activate the cinematic camera, press the G key. I use the quad bezier curve with linear interpolation. Please note that once the cinematic is run, you cannot reset it (ie pressing G does nothing after).
+## Code Explanations
+Please note, I was not able to implement particles, but my code is present (drawMe is just commented out). It was working in lab 9 (and was demoed) but for some reason when I was trying to implement it here it wasn't working and would crash with no errors. Any feedback on a fix would be appreciated. 
