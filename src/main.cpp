@@ -46,6 +46,8 @@ public:
 	shared_ptr<Shape> sphere;
 	int citySize;
 	vector<shared_ptr<Shape>> city;
+	int sedanSize;
+	vector<shared_ptr<Shape>> sedan;
 
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
@@ -59,15 +61,20 @@ public:
 	shared_ptr<Texture> textureSkybox;
 	shared_ptr<Texture> textureCity;
 
-	//global data (larger program should be encapsulated)
+	//shape mins and maxes
 	vec3 gMin;
 	vec3 cubeMin;
 	vec3 cubeMax;
-	//camera data
-	vec3 camPos = vec3(0,0,4);
+
+	//camera data (with initial camera position)
+	vec3 camPos = vec3(15, 4, 20);
 	vec3 camRight;
 	vec3 gaze;
 	float camSpeed = 0.1;
+	//camera values (in degrees)
+	float phi = 0;
+	float theta = -120.0f;
+
 	//cinematic data
 	bool goCamera = false;
 	float camT = 0.0f;
@@ -85,9 +92,7 @@ public:
 	bool gAnimate = true;
 	float gPauseStart;
 	float gPausedTimeOffset;
-	//camera values (in degrees)
-	float phi = 0;
-	float theta = 0;
+	
 
 	void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mods)
 	{
@@ -119,6 +124,7 @@ public:
 			goCamera = !goCamera;
 		}
 		if (key == GLFW_KEY_X && action == GLFW_PRESS) {
+			printf("%d,%d,%d,", camPos.x, camPos.y, camPos.z);
 			if (gAnimate) {
         		// Pause animation
         		gAnimate = false;
@@ -287,6 +293,25 @@ public:
 			}
 		}
 
+		// sedan mesh
+		vector<tinyobj::shape_t> TOshapesD;
+ 		vector<tinyobj::material_t> objMaterialsD;
+ 		rc = tinyobj::LoadObj(TOshapesD, objMaterialsD, errStr, (resourceDirectory + "/Sedan3.obj").c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			// sedan is multishaped, need to iterate through every shape
+			sedanSize = TOshapesD.size();
+			for(int i = 0; i < sedanSize; i++){
+				shared_ptr<Shape> shapeD = make_shared<Shape>();
+				shapeD->createShape(TOshapesD[i]);
+				shapeD->measure();
+				shapeD->init();
+				// Add to sedan shapes vector
+				sedan.push_back(shapeD);
+			}
+		}
+
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
 	}
@@ -420,7 +445,6 @@ public:
    	}
 
 	void drawHierModel(shared_ptr<MatrixStack> Model, shared_ptr<Program> prog){
-	
 		Model->pushMatrix();
 			// GLOBAL DRAWS
 			Model->loadIdentity();
@@ -557,6 +581,8 @@ public:
 		View->pushMatrix();
 		View->loadIdentity();
 		
+		// Camera initial position
+
 		// calculated with radius 5
 		float xGaze = 5.0f * glm::cos(glm::radians(phi)) * glm::cos(glm::radians(theta));
 		float yGaze = 5.0f * glm::sin(glm::radians(phi));
@@ -606,8 +632,6 @@ public:
 		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
 		glUniform1f(texProg->getUniform("MatShine"), 27.9);
 		glUniform1i(texProg->getUniform("flip"), 0);
-		// texture1 gets assigned to Texture0 in the GPU texture shader
-		// texture1->bind(texProg->getUniform("Texture0"));
 
 		//draw big background cylinder
 		glUniform1i(texProg->getUniform("flip"), 1);
@@ -626,25 +650,17 @@ public:
 		textureGodzilla->bind(texProg->getUniform("Texture0"));
 		drawHierModel(Model, texProg);
 		texProg->unbind();
-
-		
 		// Animate the head
 		// Offset by any paused time
 		float currentTime = glfwGetTime() - gPausedTimeOffset;
 		float currentSin = sin(currentTime);
 		if(gAnimate){
 			headTheta = currentSin;
-		} 
+		}
 
-		//switch shaders to the texture mapping shader and draw the ground
-		texProg->bind();
-		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
-		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-		glUniformMatrix4fv(texProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
-		glUniform1f(texProg->getUniform("MatShine"), 27.9);	
-		glUniform1i(texProg->getUniform("flip"), 0);
-		
+		// draw array of cars (sedans)
+
+		// draw textured ground
 		drawGround(texProg);
 
 		texProg->unbind();
@@ -657,7 +673,6 @@ public:
 		// Pop matrix stacks.
 		Projection->popMatrix();
 		View->popMatrix();
-
 	}
 };
 
