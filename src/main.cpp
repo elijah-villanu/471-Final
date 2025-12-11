@@ -70,7 +70,8 @@ public:
 	vec3 cubeMax;
 
 	//camera data (with initial camera position)
-	vec3 camPos = vec3(15, 4, 20);
+	vec3 initCam = vec3(15, 4, 20);
+	vec3 camPos = initCam;
 	vec3 camRight;
 	vec3 gaze;
 	float camSpeed = 0.1;
@@ -81,9 +82,9 @@ public:
 	//cinematic data
 	bool goCamera = false;
 	float camT = 0.0f;
-	glm::vec3 bezA = vec3(0, 1, 5);
-	glm::vec3 bezB = vec3(0, 0, 0);
-	glm::vec3 bezC = vec3(3, 1, 1);
+	glm::vec3 bezStart = initCam;
+	glm::vec3 bezEnd = vec3(2, 8, 3);
+	glm::vec3 bezControl = vec3(-7, 12, 7);
 
 	// light animation data
 	float lightTrans = 0;
@@ -455,7 +456,7 @@ public:
 			camT = 1.0f;
 		}
 		// defaults to linear interpolation
-		camPos = Bezier::quadBez(nullptr, bezA, bezB, bezC, camT);
+		camPos = Bezier::quadBez(Bezier::quadErp, bezStart, bezEnd, bezControl, camT);
       }
    	}
 
@@ -656,7 +657,7 @@ public:
 		// space between
 		float sp = 5;
 		// position of center
-		float offx = -3;
+		float offx = -4;
 		float offz = 6;
 		  for (int i =0; i < 3; i++) {
 		  	for (int j=0; j < 2; j++) {
