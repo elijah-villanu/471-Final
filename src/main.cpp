@@ -55,6 +55,8 @@ public:
 	vector<float> randOffsetx;
 	vector<float> randOffsetz;
 	vector<float> randRotate;
+	int heliSize;
+	vector<shared_ptr<Shape>> heli;
 
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
@@ -189,8 +191,11 @@ public:
 
 		// Set background color.
 		glClearColor(.117f, .4627f, 0.80f, 1.0f);
-		// Enable z-buffer test.
-		glEnable(GL_DEPTH_TEST);
+		// Enable z-buffer test for particles
+		CHECKED_GL_CALL(glEnable(GL_DEPTH_TEST));
+		// CHECKED_GL_CALL(glEnable(GL_BLEND));
+		// CHECKED_GL_CALL(glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+		// CHECKED_GL_CALL(glPointSize(24.0f));
 
 		// Initialize the GLSL program that we will use for local shading
 		prog = make_shared<Program>();
@@ -355,6 +360,25 @@ public:
 		}
 		randomSedanGeneration();
 
+		// helicopter mesh
+		vector<tinyobj::shape_t> TOshapesE;
+ 		vector<tinyobj::material_t> objMaterialsE;
+ 		rc = tinyobj::LoadObj(TOshapesE, objMaterialsE, errStr, (resourceDirectory + "/heli.obj").c_str());
+		if (!rc) {
+			cerr << errStr << endl;
+		} else {
+			// sedan is multishaped, need to iterate through every shape
+			heliSize = TOshapesE.size();
+			for(int i = 0; i < heliSize; i++){
+				shared_ptr<Shape> shapeE = make_shared<Shape>();
+				shapeE->createShape(TOshapesE[i]);
+				shapeE->measure();
+				shapeE->init();
+				// Add to heli shapes vector
+				heli.push_back(shapeE);
+			}
+		}
+
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
 	}
@@ -470,6 +494,12 @@ public:
     			glUniform3f(curS->getUniform("MatSpec"), 0.85, 0.85, 0.85);
     			glUniform1f(curS->getUniform("MatShine"), 64.0);
     		break;
+			case 2: // blueish heli
+				glUniform3f(curS->getUniform("MatAmb"), 0.05, 0.05, 0.15);
+    			glUniform3f(curS->getUniform("MatDif"), 0.15, 0.15, 0.80);
+    			glUniform3f(curS->getUniform("MatSpec"), 0.85, 0.85, 0.85);
+    			glUniform1f(curS->getUniform("MatShine"), 50.0);
+			break;
   		}
 	}
 
@@ -663,6 +693,9 @@ public:
 		// returned matrix ^^ apply to view
 		View->multMatrix(ViewTrans);
 
+		// rotate camera for particles
+		thePartSystem->setCamera(View->topMatrix());
+
 		// Draw the scene
 		// draw the city (non textured)
 		prog->bind();
@@ -712,7 +745,27 @@ public:
 			}
 		  }
 		Model->popMatrix();
+		prog->unbind();
 
+		// draw the helicopter
+		prog->bind();
+		  Model->pushMatrix();
+		  	// First move helicopter to dummy as pivot point
+		  	Model->translate(vec3(0, 10, 0));
+			// Rotate about the street light base (pivot)
+			Model->rotate(glfwGetTime(),vec3(0, 1, 0));
+			// Move out to desired position radially
+		  	Model->translate(vec3(4, 0, 0));
+			//Have helicopter face tangent (rotation on own axis)
+			Model->rotate(3.14,vec3(0,1,0)); 
+
+			Model->scale(vec3(0.01));
+			setMaterial(prog, 2);
+			setModel(prog, Model);
+			for(int i = 0; i < heliSize; i++){
+				heli[i]->draw(prog);
+			}
+		  Model->popMatrix();
 		prog->unbind();
 
 		// draw textured meshes
@@ -740,6 +793,7 @@ public:
 		textureGodzilla->bind(texProg->getUniform("Texture0"));
 		drawHierModel(Model, texProg);
 		texProg->unbind();
+
 		// Animate the head
 		// Offset by any paused time
 		float currentTime = glfwGetTime() - gPausedTimeOffset;
@@ -763,7 +817,7 @@ public:
 			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix())));
 	
 			thePartSystem->setCamera(View->topMatrix());
-			thePartSystem->drawMe(partProg);
+			// thePartSystem->drawMe(partProg);
 			thePartSystem->update();
 			Model->popMatrix();
 		partProg->unbind();
