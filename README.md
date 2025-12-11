@@ -1,6 +1,11 @@
 # 471 Final Project Submission
 ## To Compline and Run
 With VS CODE on Windows:
+CTRL + SHIFT + P for Command Pallete
+Choose "CMAKE: Configure" and choose GCC as the compiler
+CTRL + SHIFT + P for Command Pallete
+Choose "CMAKE: Build" to build files into P3.exe (Used assignment 3's base code)
+Press Play at bottom left to run exe
 
 ## Controls
 Camera control

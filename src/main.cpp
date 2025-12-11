@@ -258,12 +258,6 @@ public:
   		textureCement->setUnit(0);
   		textureCement->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-		textureCity = make_shared<Texture>();
-  		textureCity->setFilename(resourceDirectory + "/city_tex.jpg");
-  		textureCity->init();
-  		textureCity->setUnit(1);
-  		textureCity->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);		
-
 		textureGodzilla = make_shared<Texture>();
   		textureGodzilla->setFilename(resourceDirectory + "/reptile.jpg");
   		textureGodzilla->init();
