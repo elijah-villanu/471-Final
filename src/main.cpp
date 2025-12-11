@@ -48,6 +48,9 @@ public:
 	vector<shared_ptr<Shape>> city;
 	int sedanSize;
 	vector<shared_ptr<Shape>> sedan;
+	vector<float> randOffsetx;
+	vector<float> randOffsetz;
+	vector<float> randRotate;
 
 	//global data for ground plane - direct load constant defined CPU data to GPU (not obj)
 	GLuint GrndBuffObj, GrndNorBuffObj, GrndTexBuffObj, GIndxBuffObj;
@@ -311,9 +314,21 @@ public:
 				sedan.push_back(shapeD);
 			}
 		}
+		randomSedanGeneration();
 
 		//code to load in the ground plane (CPU defined data passed to GPU)
 		initGround();
+	}
+
+	// generate random offsets and rotations for sedans placed around the world
+	void randomSedanGeneration(){
+		// hard coded for i = 3, j = 2
+
+		for (int i = 0; i < 6; i++){
+			randOffsetx.push_back(randomFloat(-2.0f, 2.0f));
+			randOffsetz.push_back(randomFloat(-3.0f, 2.5f));
+			randRotate.push_back(randomFloat(0, 6.28f));
+		}
 	}
 
 	//directly pass quad for the ground to the GPU
@@ -553,6 +568,12 @@ public:
 		Model->popMatrix();
 	}
 
+	float randomFloat(float l, float h)
+	{
+		float r = rand() / (float) RAND_MAX;
+		return (1.0f - r) * l + r * h;
+	}
+
 	void render(float frametime) {
 		// Get current frame buffer size.
 		int width, height;
@@ -581,8 +602,6 @@ public:
 		View->pushMatrix();
 		View->loadIdentity();
 		
-		// Camera initial position
-
 		// calculated with radius 5
 		float xGaze = 5.0f * glm::cos(glm::radians(phi)) * glm::cos(glm::radians(theta));
 		float yGaze = 5.0f * glm::sin(glm::radians(phi));
@@ -619,10 +638,42 @@ public:
 			Model->rotate(3.14, vec3(0, 1, 0));
 			Model->scale(vec3(0.002));
 			setModel(prog, Model);
-			for (int i; i < citySize; i++){
+			for (int i = 0; i < citySize; i++){
 				city[i]->draw(prog);
 			}
 		Model->popMatrix();
+		prog->unbind();
+
+		prog->bind();
+		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+
+		// draw cars untextured (within radius)
+		Model->pushMatrix();
+		// scale
+		float dScale = 0.6;
+		// space between
+		float sp = 5;
+		// position of center
+		float offx = -3;
+		float offz = 6;
+		  for (int i =0; i < 3; i++) {
+		  	for (int j=0; j < 2; j++) {
+			  Model->pushMatrix();
+				Model->translate(vec3(offx+sp*i + randOffsetx[i + j], -0.6, offz+sp*j + randOffsetz[i+j]));
+				Model->rotate(randRotate[i + j],vec3(0, 1, 0));
+				Model->scale(vec3(dScale));
+				setMaterial(prog, 0);
+				setModel(prog, Model);
+				for(int i = 0; i < sedanSize; i++){
+					sedan[i]->draw(prog);
+				}
+			  Model->popMatrix();
+			}
+		  }
+		Model->popMatrix();
+
 		prog->unbind();
 
 		// draw textured meshes
@@ -657,8 +708,6 @@ public:
 		if(gAnimate){
 			headTheta = currentSin;
 		}
-
-		// draw array of cars (sedans)
 
 		// draw textured ground
 		drawGround(texProg);
