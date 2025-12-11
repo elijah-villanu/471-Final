@@ -44,6 +44,8 @@ public:
 	// geometry information
 	int dummySize;
 	vector<shared_ptr<Shape>> dummy;
+	int headIndex;
+	vec3 neckPivot;
 
 	shared_ptr<Shape> sphere;
 
@@ -56,11 +58,11 @@ public:
 	//ground VAO
 	GLuint GroundVertexArrayID;
 
-	//the image to use as a texture (ground)
-	shared_ptr<Texture> texture0;
-	shared_ptr<Texture> texture1;
-	shared_ptr<Texture> texture2;
-	shared_ptr<Texture> texture3;
+	//the image to use as a texture 
+	shared_ptr<Texture> textureCement;
+	shared_ptr<Texture> textureGodzilla;
+	shared_ptr<Texture> textureSkybox;
+	shared_ptr<Texture> textureCity;
 
 	//global data (larger program should be encapsulated)
 	vec3 gMin;
@@ -76,12 +78,16 @@ public:
 	glm::vec3 bezB = vec3(0, 0, 0);
 	glm::vec3 bezC = vec3(3, 1, 1);
 
-	//animation data
+	// light animation data
 	float lightTrans = 0;
 	float gTrans = -3;
-	float sTheta = 0;
+	// hierarchical animation data
+	float headTheta = 0;
 	float eTheta = 0;
 	float hTheta = 0;
+	bool gAnimate = true;
+	float gPauseStart;
+	float gPausedTimeOffset;
 	//camera values (in degrees)
 	float phi = 0;
 	float theta = 0;
@@ -106,7 +112,6 @@ public:
 		if (key == GLFW_KEY_S && action == GLFW_REPEAT){
 			camPos -= camSpeed * gaze;
 		}
-
 		if (key == GLFW_KEY_Q && action == GLFW_REPEAT){
 			lightTrans += 0.5;
 		}
@@ -115,6 +120,17 @@ public:
 		}
 		if (key == GLFW_KEY_G && action == GLFW_RELEASE) {
 			goCamera = !goCamera;
+		}
+		if (key == GLFW_KEY_X && action == GLFW_PRESS) {
+			if (gAnimate) {
+        		// Pause animation
+        		gAnimate = false;
+				gPauseStart = glfwGetTime();
+			} else {
+				// Resume animation (need to track current time to continue where it leaves off)
+				gAnimate = true;
+				gPausedTimeOffset += glfwGetTime() - gPauseStart;
+			}
 		}
 		if (key == GLFW_KEY_Z && action == GLFW_PRESS) {
 			glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -154,7 +170,7 @@ public:
 		GLSL::checkVersion();
 
 		// Set background color.
-		glClearColor(.72f, .84f, 1.06f, 1.0f);
+		glClearColor(.117f, .4627f, 0.80f, 1.0f);
 		// Enable z-buffer test.
 		glEnable(GL_DEPTH_TEST);
 
@@ -173,6 +189,7 @@ public:
 		prog->addUniform("lightPos");
 		prog->addAttribute("vertPos");
 		prog->addAttribute("vertNor");
+		prog->addAttribute("vertTex");
 
 		// Initialize the GLSL program that we will use for texture mapping
 		texProg = make_shared<Program>();
@@ -192,29 +209,29 @@ public:
 
 		//read in a load the texture
 		//wrap modes: clamps texture coordinates from 0 to 1, so edge pixels are repeated
-		texture0 = make_shared<Texture>();
-  		texture0->setFilename(resourceDirectory + "/concrete.jpg");
-  		texture0->init();
-  		texture0->setUnit(0);
-  		texture0->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		textureCement = make_shared<Texture>();
+  		textureCement->setFilename(resourceDirectory + "/concrete.jpg");
+  		textureCement->init();
+  		textureCement->setUnit(0);
+  		textureCement->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-  		texture1 = make_shared<Texture>();
-  		texture1->setFilename(resourceDirectory + "/ship_texture.jpg");
-  		texture1->init();
-  		texture1->setUnit(1);
-  		texture1->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		textureCity = make_shared<Texture>();
+  		textureCity->setFilename(resourceDirectory + "/_9.jpg");
+  		textureCity->init();
+  		textureCity->setUnit(1);
+  		textureCity->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);		
 
-		texture2 = make_shared<Texture>();
-  		texture2->setFilename(resourceDirectory + "/cartoonWood.jpg");
-  		texture2->init();
-  		texture2->setUnit(2);
-  		texture2->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
+		textureGodzilla = make_shared<Texture>();
+  		textureGodzilla->setFilename(resourceDirectory + "/reptile.jpg");
+  		textureGodzilla->init();
+  		textureGodzilla->setUnit(2);
+  		textureGodzilla->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
-		texture3 = make_shared<Texture>();
-  		texture3->setFilename(resourceDirectory + "/manhattan-skyline.jpg");
-  		texture3->init();
-  		texture3->setUnit(3);
-  		texture3->setWrapModes(GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT);
+		textureSkybox = make_shared<Texture>();
+  		textureSkybox->setFilename(resourceDirectory + "/manhattan-skyline.jpg");
+  		textureSkybox->init();
+  		textureSkybox->setUnit(3);
+  		textureSkybox->setWrapModes(GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT);
 }
 
 	void initGeom(const std::string& resourceDirectory)
@@ -228,7 +245,7 @@ public:
 		vector<tinyobj::shape_t> TOshapes;
  		vector<tinyobj::material_t> objMaterials;
  		string errStr;
- 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/dummy.obj").c_str());
+ 		bool rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/cubeWTex.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
@@ -243,8 +260,12 @@ public:
 				dummy.push_back(shape);
 			}
 		}
-		//read out information stored in the shape about its size - something like this...
-		//then do something with that information.....
+		headIndex = dummySize - 1;
+		// grab min and max to find neck pivot
+		vec3 headMin = dummy[headIndex]->min;
+		vec3 headMax = dummy[headIndex]->max;
+		neckPivot = vec3((headMin.x + headMax.x) * 0.5f, headMin.y,(headMin.z + headMax.z) * 0.5f);
+
 		// gMin.x = sphere->min.x;
 		// gMin.y = sphere->min.y;
 
@@ -252,7 +273,7 @@ public:
 		vector<tinyobj::shape_t> TOshapesB;
  		vector<tinyobj::material_t> objMaterialsB;
 		//load in the mesh and make the shape(s)
- 		rc = tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr, (resourceDirectory + "/sphereWTex.obj").c_str());
+ 		rc = tinyobj::LoadObj(TOshapesB, objMaterialsB, errStr, (resourceDirectory + "/cylinder.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {	
@@ -265,7 +286,7 @@ public:
 		// city mesh
 		vector<tinyobj::shape_t> TOshapesC;
  		vector<tinyobj::material_t> objMaterialsC;
- 		rc = tinyobj::LoadObj(TOshapes, objMaterials, errStr, (resourceDirectory + "/city.obj").c_str());
+ 		rc = tinyobj::LoadObj(TOshapesC, objMaterialsC, errStr, (resourceDirectory + "/city.obj").c_str());
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
@@ -273,7 +294,7 @@ public:
 			citySize = TOshapesC.size();
 			for(int i = 0; i < citySize; i++){
 				shared_ptr<Shape> shapeC = make_shared<Shape>();
-				shapeC->createShape(TOshapes[i]);
+				shapeC->createShape(TOshapesC[i]);
 				shapeC->measure();
 				shapeC->init();
 				// Add to city shapes vector
@@ -288,7 +309,7 @@ public:
 	//directly pass quad for the ground to the GPU
 	void initGround() {
 
-		float g_groundSize = 20;
+		float g_groundSize = 40;
 		float g_groundY = -0.25;
 
   		// A x-z plane at y = g_groundY of dimension [-g_groundSize, g_groundSize]^2
@@ -343,7 +364,7 @@ public:
      	curS->bind();
      	glBindVertexArray(GroundVertexArrayID);
 		// fragment shader SPECIFIC to textures
-     	texture0->bind(curS->getUniform("Texture0"));
+     	textureCement->bind(curS->getUniform("Texture0"));
 		//draw the ground plane 
   		SetModel(vec3(0, -1, 0), 0, 0, 1, curS);
   		glEnableVertexAttribArray(0);
@@ -369,7 +390,7 @@ public:
      }
 
      //helper function to pass material data to the GPU (for both fragment shaders)
-	void SetMaterial(shared_ptr<Program> curS, int i) {
+	void setMaterial(shared_ptr<Program> curS, int i) {
 
     	switch (i) {
     		case 0: // metal ship
@@ -453,7 +474,7 @@ public:
 		// right of camera in its own coordinate system (camera basis vector u)
 		camRight = normalize(cross(gaze,vec3(0, 1, 0)));
 
-		// if in bezier curve animation, set look at point towards globe
+		// if in bezier curve animation, set look at point towards dummy
 		if(goCamera){
 			ViewTrans = glm::lookAt(camPos, vec3(0, 0, -1), vec3(0, 1, 0));
 		}
@@ -463,64 +484,80 @@ public:
 		View->multMatrix(ViewTrans);
 
 		// Draw the scene
+		// draw the city (non textured)
+
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
 		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
 		glUniform1f(texProg->getUniform("MatShine"), 27.9);
 		glUniform1i(texProg->getUniform("flip"), 0);
-		// texture1 gets assigned to Texture0 in the GPU
-		texture1->bind(texProg->getUniform("Texture0"));
+		// texture1 gets assigned to Texture0 in the GPU texture shader
+		// texture1->bind(texProg->getUniform("Texture0"));
 
-		// draw the array of ships
-		Model->pushMatrix();
-
-		// Scale
-		// float dScale = 1.0/(theShip->max.x-theShip->min.x);
-		// // space between
-		// float sp = 3.0;
-		// // offset from center
-		// float off = -3.5;
-		//   for (int i =0; i < 3; i++) {
-		//   	for (int j=0; j < 3; j++) {
-		// 	  Model->pushMatrix();
-		// 		Model->translate(vec3(off+sp*i, -0.5, off+sp*j));
-		// 		Model->scale(vec3(dScale));
-		// 		// SetMaterial(texProg, 0);
-		// 		glUniform1i(texProg->getUniform("flip"), 0);
-		// 		glUniformMatrix4fv(texProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix()));
-		// 		theShip->draw(texProg);
-		// 	  Model->popMatrix();
-		// 	}
-		//   }
-		// Model->popMatrix();
-
-		//draw big background sphere
+		//draw big background cylinder
 		glUniform1i(texProg->getUniform("flip"), 1);
-		texture3->bind(texProg->getUniform("Texture0"));
+		textureSkybox->bind(texProg->getUniform("Texture0"));
 		Model->pushMatrix();
 			Model->loadIdentity();
-			Model->translate(vec3(0.0f, 1.0f, 0.0f));
-			Model->scale(vec3(15.0));
+			Model->translate(vec3(0.0f, -40.0f, 0.0f));
+			Model->scale(vec3(40.0, 50.0, 50.0));
 			setModel(texProg, Model);
 			sphere->draw(texProg);
 		Model->popMatrix();
+		textureSkybox->unbind();
 
-		//draw the dummy mesh
+		// draw the city
 		glUniform1i(texProg->getUniform("flip"), 0);
-		texture2->bind(texProg->getUniform("Texture0"));
+		textureCity->bind(texProg->getUniform("Texture0"));		
 		Model->pushMatrix();
 			Model->loadIdentity();
-		  	Model->translate(vec3(0, -0.5, 0));
-			Model->scale(vec3(0.01,0.01,0.01));
+			Model->translate(vec3(0.0f, -1.4f, -10.0f));
+			Model->rotate(3.14, vec3(0, 1, 0));
+			Model->scale(vec3(0.001));
 			setModel(texProg, Model);
-			for(int i = 0; i < dummySize; i++){
-				dummy[i]->draw(texProg);
-			}	
+			for (int i; i < citySize; i++){
+				city[i]->draw(texProg);
+			}
 		Model->popMatrix();
-		
+		textureCement->unbind();
+
+		//draw the dummy mesh
+		glUniform1i(texProg->getUniform("flip"), 1);
+		textureGodzilla->bind(texProg->getUniform("Texture0"));
+		// drawHierarchicalModel();
+		Model->pushMatrix();
+			Model->loadIdentity();
+		  	Model->translate(vec3(0, -0.5, 3.0f));
+			Model->rotate(-1.57, vec3(1, 0, 0));
+			Model->scale(vec3(1, 1, 1));
+			for(int i = 0; i < dummySize; i++){
+				// if head, animate
+				if (i == headIndex){
+					Model->pushMatrix();
+						Model->translate(-neckPivot);
+						Model->rotate(headTheta, vec3(0, 1, 0));
+						Model->translate(neckPivot);
+						setModel(texProg, Model);
+						dummy[headIndex]->draw(texProg);
+					Model->popMatrix();
+				} else {
+					setModel(texProg, Model);
+					dummy[i]->draw(texProg);
+				}
+			}
+		Model->popMatrix();
+	
 		texProg->unbind();
 
+		
+		// Animate the head
+		// Offset by any paused time
+		float currentTime = glfwGetTime() - gPausedTimeOffset;
+		float currentSin = sin(currentTime);
+		if(gAnimate){
+			headTheta = currentSin;
+		} 
 
 		//switch shaders to the texture mapping shader and draw the ground
 		texProg->bind();
@@ -536,7 +573,7 @@ public:
 		texProg->unbind();
 		
 		//animation update example
-		sTheta = sin(glfwGetTime());
+		headTheta = sin(glfwGetTime());
 		eTheta = std::max(0.0f, (float)sin(glfwGetTime()));
 		hTheta = std::max(0.0f, (float)cos(glfwGetTime()));
 
