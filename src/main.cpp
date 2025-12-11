@@ -17,6 +17,7 @@
 #include "Texture.h"
 #include "Spline.h"
 #include "Bezier.h"
+#include "particleSys.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader/tiny_obj_loader.h>
@@ -41,6 +42,9 @@ public:
 	//Our shader program for textures
 	std::shared_ptr<Program> texProg;
 
+	//Our particle program
+	std::shared_ptr<Program> partProg;
+	
 	// geometry information
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
@@ -63,6 +67,7 @@ public:
 	shared_ptr<Texture> textureGodzilla;
 	shared_ptr<Texture> textureSkybox;
 	shared_ptr<Texture> textureCity;
+	shared_ptr<Texture> textureAlpha;
 
 	//shape mins and maxes
 	vec3 gMin;
@@ -79,12 +84,18 @@ public:
 	float phi = 0;
 	float theta = -120.0f;
 
-	//cinematic data
+	// cinematic data
 	bool goCamera = false;
 	float camT = 0.0f;
 	glm::vec3 bezStart = initCam;
 	glm::vec3 bezEnd = vec3(2, 8, 3);
 	glm::vec3 bezControl = vec3(-7, 12, 7);
+
+	// particle data
+	float t = 0.0f; //reset in init
+	float h = 0.01f;
+	//the partricle system
+	particleSys *thePartSystem;
 
 	// light animation data
 	float lightTrans = 0;
@@ -214,6 +225,27 @@ public:
 		texProg->addAttribute("vertNor");
 		texProg->addAttribute("vertTex");
 
+		// Initialize the GLSL program that we will use for particles
+		partProg = make_shared<Program>();
+		partProg->setVerbose(true);
+		partProg->setShaderNames(
+			resourceDirectory + "/part_vert.glsl",
+			resourceDirectory + "/part_frag.glsl");
+		if (! partProg->init())
+		{
+			std::cerr << "One or more shaders failed to compile... exiting!" << std::endl;
+			exit(1);
+		}
+		partProg->addUniform("P");
+		partProg->addUniform("M");
+		partProg->addUniform("V");
+		partProg->addUniform("alphaTexture");
+		partProg->addAttribute("pColor");
+		partProg->addAttribute("vertPos");
+
+		thePartSystem = new particleSys(vec3(0, 0.25, 0.75));
+		thePartSystem->gpuSetup();
+
 		//read in a load the texture
 		//wrap modes: clamps texture coordinates from 0 to 1, so edge pixels are repeated
 		textureCement = make_shared<Texture>();
@@ -239,6 +271,12 @@ public:
   		textureSkybox->init();
   		textureSkybox->setUnit(3);
   		textureSkybox->setWrapModes(GL_MIRRORED_REPEAT, GL_MIRRORED_REPEAT);
+
+		textureAlpha = make_shared<Texture>();
+		textureAlpha->setFilename(resourceDirectory + "/alpha.bmp");
+		textureAlpha->init();
+		textureAlpha->setUnit(4);
+		textureAlpha->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 }
 
 	void initGeom(const std::string& resourceDirectory)
@@ -714,7 +752,22 @@ public:
 		drawGround(texProg);
 
 		texProg->unbind();
-		
+
+		// draw particles at car positions
+		partProg->bind();
+			Model->pushMatrix();
+			Model->loadIdentity();
+			textureAlpha->bind(partProg->getUniform("alphaTexture"));
+			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix())));
+			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix())));
+			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix())));
+	
+			thePartSystem->setCamera(View->topMatrix());
+			thePartSystem->drawMe(partProg);
+			thePartSystem->update();
+			Model->popMatrix();
+		partProg->unbind();
+
 		//animation update example
 		headTheta = sin(glfwGetTime());
 		eTheta = std::max(0.0f, (float)sin(glfwGetTime()));

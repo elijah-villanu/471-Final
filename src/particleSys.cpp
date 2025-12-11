@@ -10,7 +10,7 @@ using namespace std;
 
 particleSys::particleSys(vec3 source) {
 
-	numP = 700;	
+	numP = 100;	
 	t = 0.0f; //total time
 	h = 0.01f; //time step
 	g = vec3(0.0f, 0.01f, 0.0f); //gravity
@@ -49,13 +49,11 @@ void particleSys::gpuSetup() {
    //set the current state to focus on our vertex buffer
    glBindBuffer(GL_ARRAY_BUFFER, vertBuffObj);
    //actually memcopy the data - only do this once
-   glBufferData(GL_ARRAY_BUFFER, sizeof(points), &points[0], GL_STREAM_DRAW);
-
+  glBufferData(GL_ARRAY_BUFFER, points.size() * sizeof(GLfloat), nullptr, GL_STREAM_DRAW);
    //attribute partical color buffer array
   glGenBuffers(1, &colorBuffer);
   glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-  glBufferData(GL_ARRAY_BUFFER, sizeof(pointColors), NULL, GL_STREAM_DRAW);
-
+  glBufferData(GL_ARRAY_BUFFER, pointColors.size() * sizeof(GLfloat), nullptr, GL_STREAM_DRAW);
    
   assert(glGetError() == GL_NO_ERROR);
    
