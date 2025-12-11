@@ -216,7 +216,7 @@ public:
   		textureCement->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);
 
 		textureCity = make_shared<Texture>();
-  		textureCity->setFilename(resourceDirectory + "/_9.jpg");
+  		textureCity->setFilename(resourceDirectory + "/city_tex.jpg");
   		textureCity->init();
   		textureCity->setUnit(1);
   		textureCity->setWrapModes(GL_CLAMP_TO_EDGE, GL_CLAMP_TO_EDGE);		
@@ -393,11 +393,12 @@ public:
 	void setMaterial(shared_ptr<Program> curS, int i) {
 
     	switch (i) {
-    		case 0: // metal ship
-    			glUniform3f(curS->getUniform("MatAmb"), 0.03, 0.03, 0.03);
-    			glUniform3f(curS->getUniform("MatDif"), 0.2, 0.2, 0.2);
-    			glUniform3f(curS->getUniform("MatSpec"), 0.9, 0.9, 0.9);
-    			glUniform1f(curS->getUniform("MatShine"), 200.0);
+    		case 0: //skyscraper concrete
+				glUniform3f(curS->getUniform("MatAmb"),  0.2,  0.2,  0.2);
+    			glUniform3f(curS->getUniform("MatDif"), 0.4,  0.4,  0.4);
+    			glUniform3f(curS->getUniform("MatSpec"), 0.1,  0.1,  0.1);
+    			glUniform1f(curS->getUniform("MatShine"), 10.0);
+
     		break;
     		case 1: // globe (high ambient)
     			glUniform3f(curS->getUniform("MatAmb"), 0.8, 0.8, 0.8);
@@ -485,6 +486,23 @@ public:
 
 		// Draw the scene
 		// draw the city (non textured)
+		prog->bind();
+		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
+		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
+		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+
+		setMaterial(prog, 0);
+		Model->pushMatrix();
+			Model->loadIdentity();
+			Model->translate(vec3(0.0f, -1.4f, -30.0f));
+			Model->rotate(3.14, vec3(0, 1, 0));
+			Model->scale(vec3(0.002));
+			setModel(prog, Model);
+			for (int i; i < citySize; i++){
+				city[i]->draw(prog);
+			}
+		Model->popMatrix();
+		prog->unbind();
 
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
@@ -506,21 +524,6 @@ public:
 			sphere->draw(texProg);
 		Model->popMatrix();
 		textureSkybox->unbind();
-
-		// draw the city
-		glUniform1i(texProg->getUniform("flip"), 0);
-		textureCity->bind(texProg->getUniform("Texture0"));		
-		Model->pushMatrix();
-			Model->loadIdentity();
-			Model->translate(vec3(0.0f, -1.4f, -10.0f));
-			Model->rotate(3.14, vec3(0, 1, 0));
-			Model->scale(vec3(0.001));
-			setModel(texProg, Model);
-			for (int i; i < citySize; i++){
-				city[i]->draw(texProg);
-			}
-		Model->popMatrix();
-		textureCement->unbind();
 
 		//draw the dummy mesh
 		glUniform1i(texProg->getUniform("flip"), 1);
