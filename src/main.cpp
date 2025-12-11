@@ -42,13 +42,8 @@ public:
 	std::shared_ptr<Program> texProg;
 
 	// geometry information
-	int dummySize;
-	vector<shared_ptr<Shape>> dummy;
-	int headIndex;
-	vec3 neckPivot;
-
+	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
-
 	int citySize;
 	vector<shared_ptr<Shape>> city;
 
@@ -66,6 +61,8 @@ public:
 
 	//global data (larger program should be encapsulated)
 	vec3 gMin;
+	vec3 cubeMin;
+	vec3 cubeMax;
 	//camera data
 	vec3 camPos = vec3(0,0,4);
 	vec3 camRight;
@@ -241,7 +238,7 @@ public:
 		// Load geometry
  		// Some obj files contain material information. We'll ignore them for this assignment.
  		
-		// dummy mesh
+		// cube mesh
 		vector<tinyobj::shape_t> TOshapes;
  		vector<tinyobj::material_t> objMaterials;
  		string errStr;
@@ -249,25 +246,13 @@ public:
 		if (!rc) {
 			cerr << errStr << endl;
 		} else {
-			// dummy is multishaped, need to iterate through every shape
-			dummySize = TOshapes.size();
-			for(int i = 0; i < dummySize; i++){
-				shared_ptr<Shape> shape = make_shared<Shape>();
-				shape->createShape(TOshapes[i]);
-				shape->measure();
-				shape->init();
-				// Add to dummy shapes vector
-				dummy.push_back(shape);
-			}
+				cube = make_shared<Shape>();
+				cube->createShape(TOshapes[0]);
+				cube->measure();
+				cube->init();
 		}
-		headIndex = dummySize - 1;
-		// grab min and max to find neck pivot
-		vec3 headMin = dummy[headIndex]->min;
-		vec3 headMax = dummy[headIndex]->max;
-		neckPivot = vec3((headMin.x + headMax.x) * 0.5f, headMin.y,(headMin.z + headMax.z) * 0.5f);
-
-		// gMin.x = sphere->min.x;
-		// gMin.y = sphere->min.y;
+		cubeMin = cube->min;
+		cubeMax = cube->max;
 
 		// cylinder skybox mesh
 		vector<tinyobj::shape_t> TOshapesB;
@@ -434,6 +419,116 @@ public:
       }
    	}
 
+	void drawHierModel(shared_ptr<MatrixStack> Model, shared_ptr<Program> prog){
+	
+		Model->pushMatrix();
+			// GLOBAL DRAWS
+			Model->loadIdentity();
+			Model->translate(vec3(0, 4, 0));
+				// DRAW TORSO
+				Model->pushMatrix();
+		  			// Model->translate();
+					Model->scale(vec3(1, 1.9, 0.55));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+				// DRAW HEAD
+				Model->pushMatrix();
+					// move to neck joint
+					Model->translate(vec3(0, -1, 0));
+					Model->rotate(headTheta/2, vec3(0, 1, 0));
+					Model->translate(vec3(0, 3.4, 0));
+					Model->scale(vec3(0.5));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+				// DRAW RIGHT ARM
+				Model->pushMatrix();
+					Model->translate(vec3(0.5, 1.35, 0));
+					Model->rotate(4, vec3(0, 0, 1));
+					Model->translate(vec3(-1.5, 0, 0));
+					// LOWER RIGHT
+					Model->pushMatrix();
+						Model->translate(vec3(-cubeMax.x * 1.15, 0, 0));
+						Model->rotate(0.6, vec3(0,0,1));
+						Model->translate(vec3(-1.0, 0, 0));
+						// RIGHT HAND
+						Model->pushMatrix();
+							Model->translate(vec3(-cubeMax.x * 1.1, 0,0));
+							Model->scale(vec3(0.3));
+							setModel(prog, Model);
+							cube->draw(prog);
+						Model->popMatrix();
+						Model->scale(vec3(1.1, 0.25, 0.3));
+						setModel(prog, Model);
+						cube->draw(prog);
+					Model->popMatrix();
+					Model->scale(vec3(1.15, 0.3, 0.35));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+				// DRAW LEFT ARM
+				Model->pushMatrix();
+					Model->translate(vec3(-0.5, 1.35, 0));
+					Model->rotate(-4, vec3(0, 0, 1));
+					Model->translate(vec3(1.5, 0, 0));
+					// LOWER LEFT
+					Model->pushMatrix();
+						Model->translate(vec3(cubeMax.x * 1.15, 0, 0));
+						Model->rotate(-0.6, vec3(0,0,1));
+						Model->translate(vec3(1.0, 0, 0));
+						// LEFT HAND
+						Model->pushMatrix();
+							Model->translate(vec3(cubeMax.x * 1.1, 0,0));
+							Model->scale(vec3(0.3));
+							setModel(prog, Model);
+							cube->draw(prog);
+						Model->popMatrix();
+						Model->scale(vec3(1.1, 0.25, 0.3));
+						setModel(prog, Model);
+						cube->draw(prog);
+					Model->popMatrix();
+					Model->scale(vec3(1.15, 0.3, 0.35));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+				// DRAW RIGHT LEG
+				Model->pushMatrix();
+					Model->translate(vec3(0.7, -2.5, 0));
+					Model->rotate(0.25, vec3(0,0,1));
+					// BOTTOM RIGHT LEG
+					Model->pushMatrix();
+						Model->translate(vec3(0, -cubeMax.y * 0.58, 0));
+						Model->rotate(-0.25, vec3(0, 0, 1));
+						Model->translate(vec3(0, -cubeMax.y * 0.78, 0));
+						Model->scale(vec3(0.25, 0.8, 0.25));
+						setModel(prog, Model);
+						cube->draw(prog);
+					Model->popMatrix();
+					Model->scale(vec3(0.3, 0.6, 0.3));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+				// DRAW LEFT LEG
+				Model->pushMatrix();
+					Model->translate(vec3(-0.7, -2.5, 0));
+					Model->rotate(-0.25, vec3(0,0,1));
+					// BOTTOM LEFT LEG
+					Model->pushMatrix();
+						Model->translate(vec3(0, -cubeMax.y * 0.58, 0));
+						Model->rotate(0.25, vec3(0, 0, 1));
+						Model->translate(vec3(0, -cubeMax.y * 0.78, 0));
+						Model->scale(vec3(0.25, 0.8, 0.25));
+						setModel(prog, Model);
+						cube->draw(prog);
+					Model->popMatrix();
+					Model->scale(vec3(0.3, 0.6, 0.3));
+					setModel(prog, Model);
+					cube->draw(prog);
+				Model->popMatrix();
+		Model->popMatrix();
+	}
+
 	void render(float frametime) {
 		// Get current frame buffer size.
 		int width, height;
@@ -475,9 +570,9 @@ public:
 		// right of camera in its own coordinate system (camera basis vector u)
 		camRight = normalize(cross(gaze,vec3(0, 1, 0)));
 
-		// if in bezier curve animation, set look at point towards dummy
+		// if in bezier curve animation, set look at point towards cube
 		if(goCamera){
-			ViewTrans = glm::lookAt(camPos, vec3(0, 0, -1), vec3(0, 1, 0));
+			ViewTrans = glm::lookAt(camPos, vec3(0, 5, -1), vec3(0, 1, 0));
 		}
 
 		// send look at matrix to the vertex shader to adjust view
@@ -494,7 +589,7 @@ public:
 		setMaterial(prog, 0);
 		Model->pushMatrix();
 			Model->loadIdentity();
-			Model->translate(vec3(0.0f, -1.4f, -30.0f));
+			Model->translate(vec3(0.0f, -1.0f, -30.0f));
 			Model->rotate(3.14, vec3(0, 1, 0));
 			Model->scale(vec3(0.002));
 			setModel(prog, Model);
@@ -504,6 +599,7 @@ public:
 		Model->popMatrix();
 		prog->unbind();
 
+		// draw textured meshes
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
@@ -528,29 +624,7 @@ public:
 		//draw the dummy mesh
 		glUniform1i(texProg->getUniform("flip"), 1);
 		textureGodzilla->bind(texProg->getUniform("Texture0"));
-		// drawHierarchicalModel();
-		Model->pushMatrix();
-			Model->loadIdentity();
-		  	Model->translate(vec3(0, -0.5, 3.0f));
-			Model->rotate(-1.57, vec3(1, 0, 0));
-			Model->scale(vec3(1, 1, 1));
-			for(int i = 0; i < dummySize; i++){
-				// if head, animate
-				if (i == headIndex){
-					Model->pushMatrix();
-						Model->translate(-neckPivot);
-						Model->rotate(headTheta, vec3(0, 1, 0));
-						Model->translate(neckPivot);
-						setModel(texProg, Model);
-						dummy[headIndex]->draw(texProg);
-					Model->popMatrix();
-				} else {
-					setModel(texProg, Model);
-					dummy[i]->draw(texProg);
-				}
-			}
-		Model->popMatrix();
-	
+		drawHierModel(Model, texProg);
 		texProg->unbind();
 
 		
