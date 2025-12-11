@@ -425,11 +425,11 @@ public:
     			glUniform1f(curS->getUniform("MatShine"), 10.0);
 
     		break;
-    		case 1: // globe (high ambient)
-    			glUniform3f(curS->getUniform("MatAmb"), 0.8, 0.8, 0.8);
-    			glUniform3f(curS->getUniform("MatDif"), 1, 1, 1);
-    			glUniform3f(curS->getUniform("MatSpec"), 0.5, 0.5, 0.5);
-    			glUniform1f(curS->getUniform("MatShine"), 60.0);
+    		case 1: // red car
+    			glUniform3f(curS->getUniform("MatAmb"), 0.20, 0.05, 0.05);
+    			glUniform3f(curS->getUniform("MatDif"), 0.90, 0.15, 0.15);
+    			glUniform3f(curS->getUniform("MatSpec"), 0.85, 0.85, 0.85);
+    			glUniform1f(curS->getUniform("MatShine"), 64.0);
     		break;
   		}
 	}
@@ -629,7 +629,7 @@ public:
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+		glUniform3f(texProg->getUniform("lightPos"), -12.0 + lightTrans, 1.0, 2.0);
 
 		setMaterial(prog, 0);
 		Model->pushMatrix();
@@ -647,7 +647,7 @@ public:
 		prog->bind();
 		glUniformMatrix4fv(prog->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(prog->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+		glUniform3f(texProg->getUniform("lightPos"), -12.0 + lightTrans, 1.0, 2.0);
 
 		// draw cars untextured (within radius)
 		Model->pushMatrix();
@@ -664,7 +664,7 @@ public:
 				Model->translate(vec3(offx+sp*i + randOffsetx[i + j], -0.6, offz+sp*j + randOffsetz[i+j]));
 				Model->rotate(randRotate[i + j],vec3(0, 1, 0));
 				Model->scale(vec3(dScale));
-				setMaterial(prog, 0);
+				setMaterial(prog, 1);
 				setModel(prog, Model);
 				for(int i = 0; i < sedanSize; i++){
 					sedan[i]->draw(prog);
@@ -680,7 +680,7 @@ public:
 		texProg->bind();
 		glUniformMatrix4fv(texProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix()));
 		glUniformMatrix4fv(texProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix()));
-		glUniform3f(texProg->getUniform("lightPos"), 2.0 + lightTrans, 2.0, 2.9);
+		glUniform3f(texProg->getUniform("lightPos"), -14.0 + lightTrans, 1.0, 2.0);
 		glUniform1f(texProg->getUniform("MatShine"), 27.9);
 		glUniform1i(texProg->getUniform("flip"), 0);
 
@@ -689,7 +689,7 @@ public:
 		textureSkybox->bind(texProg->getUniform("Texture0"));
 		Model->pushMatrix();
 			Model->loadIdentity();
-			Model->translate(vec3(0.0f, -40.0f, 0.0f));
+			Model->translate(vec3(5.0f, -30.0f, 5.0f));
 			Model->scale(vec3(40.0, 50.0, 50.0));
 			setModel(texProg, Model);
 			sphere->draw(texProg);
