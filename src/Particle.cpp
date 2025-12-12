@@ -23,7 +23,7 @@ Particle::Particle(vec3 start) :
 	d(0.0f),
 	x(start),
 	v(0.0f, 0.0f, 0.0f),
-	lifespan(randFloat(2.0f, 7.0f)),
+	lifespan(randFloat(2.0f, 4.0f)),
 	tEnd(0.0f),
 	scale(1.0f),
 	color(1.0f, 1.0f, 1.0f, 1.0f)
@@ -43,7 +43,7 @@ Particle::~Particle()
 void Particle::load(vec3 start)
 {
     // Random lifespan BEFORE rebirth
-    lifespan = randFloat(2.0f, 7.0f);
+    lifespan = randFloat(2.0f, 3.0f);
 
     // Random age: how long the particle has already been alive
     float age = randFloat(0.0f, lifespan);
@@ -64,12 +64,12 @@ void Particle::rebirth(float t, vec3 start)
 	m = 1.0f;
   	d = randFloat(0.0f, 0.02f);
 	x = start;
-	v.x = randFloat(-0.2f, 0.2f);
-	v.y = randFloat(0.3f, 1.0f);
-	v.z = randFloat(-0.2f, 0.2f);
-	lifespan = randFloat(2.0f, 7.0f); 
+	v.x = randFloat(-0.3f, 0.3f);
+	v.y = randFloat(0.3f, 6.0f);
+	v.z = randFloat(-0.3f, 0.3f);
+	lifespan = randFloat(2.0f, 5.0f); 
 	tEnd = t + lifespan;
-	scale = randFloat(0.2, 1.0f);
+	scale = randFloat(10.0f, 11.0f);
    	color.r = 0.0f;
    	color.g = 0.0f;
    	color.b = 0.0f;

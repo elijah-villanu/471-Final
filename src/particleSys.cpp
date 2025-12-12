@@ -10,10 +10,10 @@ using namespace std;
 
 particleSys::particleSys(vec3 source) {
 
-	numP = 100;	
+	numP = 1000;	
 	t = 0.0f; //total time
 	h = 0.01f; //time step
-	g = vec3(0.0f, 0.01f, 0.0f); //gravity
+	g = vec3(0.01f, 0.005f, 0.01f); //acceleration
 	start = source;
 	theCamera = glm::mat4(1.0);
 }
@@ -67,6 +67,10 @@ void particleSys::reSet() {
 	}
 }
 
+// set multiple emitters to support multiple source points
+void particleSys::setEmitters(const std::vector<glm::vec3>& e) {
+    emitters = e;
+}
 
 void particleSys::drawMe(std::shared_ptr<Program> prog) {
 
@@ -86,6 +90,10 @@ void particleSys::drawMe(std::shared_ptr<Program> prog) {
   glVertexAttribPointer(c_pos, 4, GL_FLOAT, GL_FALSE, 0, 0);
   glVertexAttribDivisor(c_pos, 1);
 
+  // set point sizes
+  glEnable(GL_PROGRAM_POINT_SIZE);
+  glPointSize(8.0f);
+
   // Draw the points !
   glDrawArraysInstanced(GL_POINTS, 0, 1, numP);
 
@@ -101,8 +109,9 @@ void particleSys::update() {
   vec4 col;
 
   //update the particles, as lifespan changes alpha goes to 0
-  for(auto particle : particles) {
-        particle->update(t, h, g, start);
+  for(int i = 0; i < particles.size(); i++) {
+        int emitterIndex = i % emitters.size();
+        particles[i]->update(t, h, g, emitters[emitterIndex]);
   }
   t += h;
  

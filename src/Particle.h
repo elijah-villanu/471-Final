@@ -33,7 +33,7 @@ public:
 	const vec3 &getPosition() const { return x; };
 	const vec3 &getVelocity() const { return v; };
 	const vec4 &getColor() const { return color; };
-	
+
 private:
 	float charge; // +1 or -1
 	float m; // mass

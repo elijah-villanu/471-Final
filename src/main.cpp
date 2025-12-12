@@ -51,6 +51,8 @@ public:
 	vector<shared_ptr<Shape>> city;
 	int sedanSize;
 	vector<shared_ptr<Shape>> sedan;
+	// to track car positions to add particles
+	std::vector<vec3> sedansPosPart;
 	vector<float> randOffsetx;
 	vector<float> randOffsetz;
 	vector<float> randRotate;
@@ -247,7 +249,7 @@ public:
 		partProg->addAttribute("pColor");
 		partProg->addAttribute("vertPos");
 
-		thePartSystem = new particleSys(vec3(0, 0.25, 0.75));
+		thePartSystem = new particleSys(vec3(0, 0, 4));
 		thePartSystem->gpuSetup();
 
 		//read in a load the texture
@@ -378,8 +380,7 @@ public:
 
 	// generate random offsets and rotations for sedans placed around the world
 	void randomSedanGeneration(){
-		// hard coded for i = 3, j = 2
-
+		// hard coded for i = 3, j = 2 (6 total cars)
 		for (int i = 0; i < 6; i++){
 			randOffsetx.push_back(randomFloat(-2.0f, 2.0f));
 			randOffsetz.push_back(randomFloat(-3.0f, 2.5f));
@@ -723,17 +724,23 @@ public:
 		// position of center
 		float offx = -4;
 		float offz = 6;
+		float index = 0;
 		  for (int i =0; i < 3; i++) {
 		  	for (int j=0; j < 2; j++) {
 			  Model->pushMatrix();
-				Model->translate(vec3(offx+sp*i + randOffsetx[i + j], -0.6, offz+sp*j + randOffsetz[i+j]));
-				Model->rotate(randRotate[i + j],vec3(0, 1, 0));
+				vec3 currSedanPos = vec3(offx+sp*i + randOffsetx[index], -0.6, offz+sp*j + randOffsetz[index]);
+				float currSedanRotate = randRotate[index];
+				Model->translate(currSedanPos);
+				Model->rotate(currSedanRotate,vec3(0, 1, 0));
 				Model->scale(vec3(dScale));
 				setMaterial(prog, 1);
-				setModel(prog, Model);
+				setModel(prog, Model);	
 				for(int i = 0; i < sedanSize; i++){
 					sedan[i]->draw(prog);
 				}
+				// track Sedan position and rotation for particles
+				sedansPosPart.push_back(currSedanPos);
+				index++;
 			  Model->popMatrix();
 			}
 		  }
@@ -801,18 +808,16 @@ public:
 		texProg->unbind();
 
 		// draw particles at car positions
+		thePartSystem->setEmitters(sedansPosPart);
 		partProg->bind();
-			Model->pushMatrix();
-			Model->loadIdentity();
-			textureAlpha->bind(partProg->getUniform("alphaTexture"));
-			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix())));
-			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix())));
-			CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix())));
-	
-			thePartSystem->setCamera(View->topMatrix());
-			// thePartSystem->drawMe(partProg);
-			thePartSystem->update();
-			Model->popMatrix();
+		textureAlpha->bind(partProg->getUniform("alphaTexture"));
+		CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("P"), 1, GL_FALSE, value_ptr(Projection->topMatrix())));
+		CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("V"), 1, GL_FALSE, value_ptr(View->topMatrix())));
+		CHECKED_GL_CALL(glUniformMatrix4fv(partProg->getUniform("M"), 1, GL_FALSE, value_ptr(Model->topMatrix())));
+
+		thePartSystem->setCamera(View->topMatrix());
+		thePartSystem->drawMe(partProg);
+		thePartSystem->update();
 		partProg->unbind();
 
 		//animation update example

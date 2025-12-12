@@ -22,19 +22,21 @@ public:
       vec4 x1w = C * vec4(x1.x, x1.y, x1.z, 1.0f);
       return x0w.z < x1w.z;
    }
-  
    mat4 C; // current camera matrix
 };
 
 class particleSys {
-private:
+public:
+	//Support multiple emmitters
+	std::vector<glm::vec3> emitters;
+	void setEmitters(const std::vector<glm::vec3>& e);
+private:	
 	vector<shared_ptr<Particle>> particles;
 	float t, h; //total time and time steps
 	vec3 g; //gravity
 	int numP;
 	vec3 start;
 	ParticleSorter sorter;
-	//this is not great that this is hard coded - you can make it better
 	vector<GLfloat> points;
 	vector<GLfloat> pointColors;
 	GLuint colorBuffer;
