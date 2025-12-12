@@ -47,8 +47,10 @@ public:
 	// geometry information
 	shared_ptr<Shape> cube;
 	shared_ptr<Shape> sphere;
+
 	int citySize;
 	vector<shared_ptr<Shape>> city;
+
 	int sedanSize;
 	vector<shared_ptr<Shape>> sedan;
 	// to track car positions to add particles
@@ -56,6 +58,9 @@ public:
 	vector<float> randOffsetx;
 	vector<float> randOffsetz;
 	vector<float> randRotate;
+	// radius bounding circle
+	float sedanRadius = 3.0f;
+
 	int heliSize;
 	vector<shared_ptr<Shape>> heli;
 
@@ -142,7 +147,6 @@ public:
 			goCamera = !goCamera;
 		}
 		if (key == GLFW_KEY_X && action == GLFW_PRESS) {
-			printf("%d,%d,%d,", camPos.x, camPos.y, camPos.z);
 			if (gAnimate) {
         		// Pause animation
         		gAnimate = false;
@@ -382,7 +386,7 @@ public:
 	void randomSedanGeneration(){
 		// hard coded for i = 3, j = 2 (6 total cars)
 		for (int i = 0; i < 6; i++){
-			randOffsetx.push_back(randomFloat(-2.0f, 2.0f));
+			randOffsetx.push_back(randomFloat(-4.0f, 2.0f));
 			randOffsetz.push_back(randomFloat(-3.0f, 2.5f));
 			randRotate.push_back(randomFloat(0, 6.28f));
 		}
@@ -631,11 +635,22 @@ public:
 		Model->popMatrix();
 	}
 
+	// is psuedorandom, got it from particle code
 	float randomFloat(float l, float h)
 	{
 		float r = rand() / (float) RAND_MAX;
 		return (1.0f - r) * l + r * h;
 	}
+
+	// check if two objects are colliding on x/z axis given a radius, ignores y
+	// ignores y mainly as this is used for car generation, so all same y
+	bool isCollidingXZ(const vec3 &a, const vec3 &b, float minDist)
+	{
+    	vec2 pa(a.x, a.z);
+    	vec2 pb(b.x, b.z);
+    	return distance(pa, pb) < minDist;
+	}
+
 
 	void render(float frametime) {
 		// Get current frame buffer size.
@@ -716,6 +731,7 @@ public:
 		glUniform3f(texProg->getUniform("lightPos"), -12.0 + lightTrans, 1.0, 2.0);
 
 		// draw cars untextured (within radius)
+		sedansPosPart.clear();
 		Model->pushMatrix();
 		// scale
 		float dScale = 0.6;
@@ -730,6 +746,24 @@ public:
 			  Model->pushMatrix();
 				vec3 currSedanPos = vec3(offx+sp*i + randOffsetx[index], -0.6, offz+sp*j + randOffsetz[index]);
 				float currSedanRotate = randRotate[index];
+
+				// is collision resolved
+				bool resolved = false;
+				int attempts = 0;
+				// attempt to move colliding cars away for 5 times (hard coded so not inifinite looping)
+				while (!resolved && attempts < 5) {
+					resolved = true;
+					// look at all other sedan positions and see if colliding
+					for (auto &other : sedansPosPart) {
+						if (isCollidingXZ(currSedanPos, other, sedanRadius)) {
+							vec3 pushDir = normalize(currSedanPos - other);
+							currSedanPos += pushDir * sedanRadius;
+							resolved = false;
+						}
+					}
+					attempts++;
+				}
+
 				Model->translate(currSedanPos);
 				Model->rotate(currSedanRotate,vec3(0, 1, 0));
 				Model->scale(vec3(dScale));

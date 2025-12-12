@@ -14,4 +14,4 @@ Mouse Scroll (AS INSTRUCTED FROM PITCH AND YAW LAB 8). Trackpad would work best
 G: Cinematic view, only works once
 
 ## Code Explanations
-Please note, I was not able to implement particles, but my code is present (drawMe is just commented out). It was working in lab 9 (and was demoed) but for some reason when I was trying to implement it here it wasn't working and would crash with no errors. Any feedback on a fix would be appreciated. 
+Please note, my collision implementation is not a conventional one. Collisions are used when I psuedorandomly generate the 6 sedans. I do a collision check where each sedan has a x/z-axis 2D circle, and I simply check if there's overlap. I ignore y as all cars are on the same y-level. If spawned cars are colliding, I simply move by a offset (try at most 5 times until not colliding) to where cars no longer clip.
